@@ -1,0 +1,1057 @@
+---
+title: "Factores que inciden en la representatividad de las mujeres para la toma de decisiones en la gestión del recurso hídrico."
+author: "Isabel Chumi"
+format: html
+lang: es
+toc: true
+embed-resources: true
+---
+
+# Introducción
+
+El presente estudio analiza los factores asociados con la representatividad de las mujeres en la Junta de Riego y Drenaje Machángara, Ecuador. La información procede de ***262 encuestas aplicadas a usuarios de diferentes tomas de agua de esta organización***. La incorporación de datos desglosados por sexo permite identificar diferencias en las **condiciones de participación, representación y acceso a los espacios de toma de decisiones entre mujeres y hombres**. En este sentido, el análisis busca comprender las desigualdades de género presentes en la gestión de los recursos hídricos.
+
+Diversos estudios señalan que las normas sociales y la división de responsabilidades según el género asignan a las mujeres numerosas actividades relacionadas con el abastecimiento y la gestión cotidiana del agua, mientras que los espacios de decisión y control de este recurso suelen presentar una mayor participación masculina (*Burneo, 2011; Njie & Ndiaye, 2013*).
+
+Los datos utilizados en este análisis son de fuente primaria y fueron recopilados en el marco de la investigación Factores que inciden en la representatividad de las mujeres para la toma de decisiones en la gestión del recurso hídrico, desarrollada por Chumi (2024), con financiamiento del Vicerrectorado de Investigaciones de la Universidad del Azuay. La base de datos utilizada en este ejercicio se encuentra disponible en GitHub:
+ [Datos_Analisis.xlsx](https://raw.githubusercontent.com/isabelchumip01-del/Tarea_01_Chumi/main/Datos_Analisis.xlsx). 
+
+Entre las principales variables de la base se encuentran la toma de agua, el sexo, la edad, el nivel educativo, la actividad principal, la participación en las directivas, los cargos ocupados, la percepción sobre los niveles de participación de mujeres y hombres, la frecuencia de aceptación de las sugerencias realizadas por mujeres y los factores que limitan su participación. Asimismo, se incluyen variables relacionadas con el tiempo destinado a actividades no remuneradas vinculadas con el agua y las coordenadas geográficas de las tomas de agua (*Chumi, 2024*).
+
+## Componente geoespacial
+
+Como complemento al análisis de la participación de las mujeres en la gestión del agua, se incorpora un componente geoespacial orientado a identificar la distribución territorial de las tomas de agua de la Junta de Riego y Drenaje Machángara y su relación con la delimitación de la cuenca y las divisiones político-administrativas parroquiales. Este análisis permite reconocer los sectores donde se concentran las tomas y examinar su distribución dentro del territorio de estudio.
+
+Para el desarrollo de este componente se utilizaron *capas vectoriales facilitadas por el Instituto de Estudios de Régimen Seccional del Ecuador (IERSE)*. Estas corresponden a la delimitación de la cuenca Machángara y a la organización territorial parroquial. La información hidrográfica tiene como referencia la cartografía de microcuencas del Instituto Geográfico Militar (IGM), disponible mediante su servicio de información geográfica. Por otra parte, la capa de organización territorial parroquial corresponde a información cuya institución responsable es el Comité Nacional de Límites Internos (CONALI).
+
+En cuanto a sus características espaciales, la capa de la cuenca Machángara está representada mediante geometría poligonal y contiene una entidad correspondiente al área de estudio. La capa original de organización territorial parroquial presenta geometrías multipoligonales y está conformada por 1.043 entidades. A partir de esta última se realizó una intersección espacial con el límite de la cuenca, obteniendo 13 parroquias que presentan intersección con el área de estudio. Ambas capas utilizan el sistema de referencia **WGS 84 / UTM zona 17 Sur (EPSG:32717)**.
+Finalmente, las coordenadas de las tomas de agua registradas en las encuestas de Chumi (2024) fueron transformadas en una capa de puntos para su análisis espacial. Esta información permitió relacionar las 22 tomas identificadas con las parroquias que intersectan la cuenca Machángara y elaborar representaciones cartográficas de su distribución territorial.
+
+# Preguntas 
+1. ¿Cuáles son los principales factores asociados con la participación de las mujeres en la toma de decisiones?
+2. ¿Cómo se distribuyen las mujeres lideresas dentro de la Junta de Riego y Drenaje Machángara?
+3. ¿Cómo se percibe la participación de las mujeres en comparación con la participación de los hombres en la gestión del agua?
+4. ¿Cómo se distribuyen espacialmente las tomas de agua de la Junta de Riego y Drenaje Machángara en relación con las parroquias y el territorio de la cuenca?
+
+# Importación y preparación de los datos
+
+## Carga de bibliotecas 
+
+```{r}
+#| label: carga_bibliotecas
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(plotly)
+library(DT)
+library(readxl)
+library(sf)
+library(dplyr)
+```
+
+
+## Importación de los datos
+Para la correcta incorporación de los datos disponibles en GitHub, fue necesario utilizar una fuente accesible mediante URL. Debido a que `read_excel()` no permite importar directamente el archivo `.xlsx` desde la URL, se utilizó `download.file()` para descargarlo temporalmente y posteriormente `read_excel()` para incorporarlo a R. De esta manera, GitHub se mantiene como fuente de los datos y se evita depender de una ruta local del computador al reproducir el documento de Quarto.
+
+```{r}
+#| label: carga_datos
+#| message: false
+#| warning: false
+
+url_datos <- "https://raw.githubusercontent.com/isabelchumip01-del/Tarea_01_Chumi/main/Datos_Analisis.xlsx"
+
+archivo_temporal <- tempfile(fileext = ".xlsx")
+download.file(url_datos,  archivo_temporal,  mode = "wb")
+Datos_Analisis <- read_excel(archivo_temporal)
+```
+
+## Preparación y exploración de los datos
+Una vez importada la base de datos, se realizó una exploración inicial para conocer sus dimensiones, estructura y características generales. Esta revisión permitió identificar el número de registros y variables, reconocer los tipos de datos y comprobar la correcta incorporación de la información antes de realizar los procedimientos de limpieza y transformación.
+
+```{r}
+#| label: exploración-inicial
+#| message: false
+#| warning: false
+
+dim(Datos_Analisis)
+glimpse(Datos_Analisis)
+
+```
+
+### Limpieza y transformación de los datos
+Posteriormente, se revisaron los nombres y las categorías de las variables para identificar posibles inconsistencias en su escritura y facilitar su utilización durante el análisis. Se estandarizaron los nombres de las principales variables, con el propósito de simplificar su manejo en R y mantener una estructura uniforme en la base de datos.
+
+```{r}
+#| label: limpieza-variables
+#| message: false
+#| warning: false
+
+Datos_Analisis <- Datos_Analisis %>%
+  rename(
+    toma = Toma,
+    sexo = Sexo,
+    directiva = Directiva,
+    cargo = Cargo_que_ocupa,
+    nivel_participacion = Nivel_particapación_mujeres,
+    factores = Factores_limintan_participación_mujeres
+  )
+names(Datos_Analisis)
+
+glimpse(Datos_Analisis)
+
+```
+
+## Limpieza de las categorías de participación
+Durante la revisión de la variable relacionada con los factores que limitan la participación de las mujeres, se identificaron respuestas registradas en inglés, diferencias en el uso de mayúsculas y minúsculas, así como registros que contenían varias opciones. Para facilitar su interpretación, se unificaron las categorías equivalentes en español, se normalizaron los espacios y se separaron las respuestas múltiples. Este procedimiento permite organizar la información y analizar posteriormente la frecuencia de los factores mencionados.
+
+```{r}
+#| label: limpieza-variables-1
+#| message: false
+#| warning: false
+
+Datos_Factores <- Datos_Analisis %>%
+  separate_rows(factores, sep = ", ") %>%
+  mutate(
+    # Normalizar espacios
+    factores = stringr::str_squish(factores),
+
+    # Unificar categorías equivalentes
+    factores = case_when(
+      stringr::str_to_lower(factores) == "illiteracy" ~
+        "Analfabetismo",
+
+      stringr::str_to_lower(factores) == "domestic activities do not leave time" ~
+        "Las actividades domésticas no le dejan tiempo",
+
+      stringr::str_to_lower(factores) == "lack of knowledge" ~
+        "Falta de conocimiento",
+
+      stringr::str_to_lower(factores) == "elderly people and there are no young people" ~
+        "Personas de tercera edad y no hay personas jóvenes",
+
+      stringr::str_to_lower(factores) == "no les apoyan" ~
+        "No les apoyan",
+
+      stringr::str_to_lower(factores) == "falta de comunicación de las bases centrales" ~
+        "Falta de comunicación de las bases centrales",
+
+      TRUE ~ factores
+    ),
+
+    # Uniformar la escritura de las categorías
+    factores = stringr::str_to_sentence(factores)
+  )
+
+```
+
+
+## Tabla resumen de la participación por toma de agua
+Con el propósito de conocer la distribución de las personas encuestadas en las diferentes tomas de agua, se elaboró una tabla resumen que presenta el número de participantes según su sexo y la toma a la que pertenecen. Esta información permite identificar cómo se distribuye la muestra y comparar la participación de mujeres y hombres entre las distintas tomas de agua. La tabla es interactiva, por lo que permite buscar registros, modificar el número de filas visibles y navegar entre sus páginas.
+
+```{r}
+#| label: tabla_resumen_1
+#| message: false
+#| warning: false
+
+tabla_participacion <- Datos_Analisis %>%
+  count(toma, sexo) %>%
+  rename(
+    `Toma de agua` = toma,
+    `Sexo` = sexo,
+    `Número de personas` = n
+  )
+
+datatable(
+  tabla_participacion,
+  rownames = FALSE,
+  colnames = c(
+    "Toma de agua",
+    "Sexo",
+    "Número de personas"
+  ),
+  options = list(
+    language = list(
+      search = "Buscar:",
+      lengthMenu = "Mostrar _MENU_ registros",
+      info = "Mostrando _START_ a _END_ de _TOTAL_ registros",
+      paginate = list(
+        previous = "Anterior",
+        `next` = "Siguiente"
+      )
+    ),
+    pageLength = 10
+  )
+)
+
+```
+
+
+# Gráficos
+## Pregunta 1. ¿Cuáles son los principales factores asociados con la participación de las mujeres en la toma de decisiones?
+
+Para identificar los principales factores que limitan la participación de las mujeres, se consideraron únicamente las respuestas que describen obstáculos o dificultades. Por esta razón, se excluyeron del gráfico las categorías «Todas van», «Más mujeres participan» y «Participan y expresan sus necesidades», debido a que representan percepciones positivas sobre la participación y no factores limitantes. Estas respuestas se mantienen en la base de datos original y se excluyen únicamente para delimitar el análisis presentado en esta figura.
+
+```{r}
+#| label: fig-factores
+#| message: false
+#| warning: false
+#| fig-cap: "Principales factores que limitan la participación de las mujeres. Fuente: elaboración propia a partir de Chumi (2024)."
+#| fig-width: 10
+#| fig-height: 8
+#| out-width: "100%"
+
+# Excluir respuestas positivas del análisis de factores limitantes
+factores_resumen <- Datos_Factores %>%
+  filter(
+    !stringr::str_to_lower(factores) %in% c(
+      "todas van",
+      "más mujeres participan",
+      "participan y expresan sus necesidades"
+    )
+  ) %>%
+  count(factores, sort = TRUE)
+
+# Elaborar el gráfico de frecuencias
+ggplot(
+  factores_resumen,
+  aes(
+    x = reorder(factores, n),
+    y = n
+  )
+) +
+  geom_col(fill = "steelblue") +
+  geom_text(
+    aes(label = n),
+    hjust = -0.2,
+    size = 3.5
+  ) +
+  coord_flip() +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.12))
+  ) +
+  labs(
+    title = "Factores que limitan la participación de las mujeres",
+    x = "Factores identificados",
+    y = "Frecuencia de menciones"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(
+      size = 14,
+      face = "bold",
+      hjust = 0.5
+    ),
+    plot.caption = element_text(size = 9),
+    axis.title = element_text(size = 10),
+    axis.text.y = element_text(size = 8),
+    axis.text.x = element_text(size = 9)
+  )
+```
+
+Las actividades domésticas representan el factor limitante con mayor frecuencia, con 178 menciones. Le siguen la falta de interés (92), las actividades realizadas fuera del hogar (78) y la falta de convocatoria oportuna (71). Estos resultados muestran que las limitaciones de participación se relacionan tanto con la distribución del tiempo y las responsabilidades cotidianas como con aspectos organizativos de las convocatorias.
+
+Nota: las frecuencias representan menciones de factores y no necesariamente el número de mujeres distintas.
+
+
+## Pregunta 2. ¿Cómo se distribuyen las mujeres integrantes de directivas dentro de la Junta de Riego y Drenaje Machángara?
+
+```{r}
+#| label: fig-mujeres-directivas
+#| message: false
+#| warning: false
+#| fig-cap: "Distribución de mujeres integrantes de directivas según toma de agua. Fuente: Elaboración propia a partir de Chumi (2024)."
+#| fig-width: 9
+#| fig-height: 6
+
+mujeres_directiva <- Datos_Analisis %>%
+  filter(
+    sexo == "Femenino",
+    directiva == "Sí"
+  ) %>%
+  count(toma, sort = TRUE)
+
+ggplot(
+  mujeres_directiva,
+  aes(
+    x = reorder(toma, n),
+    y = n
+  )
+) +
+  geom_point(
+    size = 3.5,
+    color = "steelblue"
+  ) +
+  coord_flip() +
+  labs(
+    title = "Mujeres integrantes de directivas por toma de agua",
+    x = "Toma de agua",
+    y = "Número de mujeres"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(
+      size = 13,
+      face = "bold",
+      hjust = 0.5
+    ),
+    axis.title = element_text(size = 9),
+    axis.text = element_text(size = 8),
+    plot.caption = element_text(size = 8)
+  )
+
+```
+La distribución de las mujeres integrantes de directivas muestra diferencias entre las tomas de agua de la Junta de Riego y Drenaje Machángara. Las tomas 13A y 16 concentran el mayor número de mujeres, con cuatro integrantes cada una, seguidas por la toma 26A, con tres. En otras tomas se registra una presencia menor, de una o dos mujeres. En conjunto, los resultados muestran que la participación de las mujeres en los espacios directivos no se distribuye de manera uniforme entre las diferentes tomas de agua.
+
+### Cargos ocupados por mujeres en las directivas
+Para complementar el análisis de la distribución de las mujeres en las directivas, se identificaron los cargos que ocupan las participantes en estos espacios de representación. Esta información permite reconocer las funciones desempeñadas por las mujeres y su distribución entre los distintos cargos de las organizaciones de riego.
+
+```{r}
+#| label: fig-cargos-directivas
+#| message: false
+#| warning: false
+#| fig-cap: "Cargos ocupados por mujeres integrantes de las directivas. Fuente: elaboración propia a partir de Chumi (2024)."
+#| fig-width: 7
+#| fig-height: 5
+#| out-width: "85%"
+
+# Seleccionar mujeres integrantes de directivas
+cargos_mujeres <- Datos_Analisis %>%
+  filter(
+    sexo == "Femenino",
+    directiva == "Sí",
+    !is.na(cargo)
+  ) %>%
+  mutate(
+    cargo = stringr::str_squish(cargo),
+    cargo = case_when(
+      stringr::str_to_lower(cargo) == "secretario" ~ "Secretaria",
+      TRUE ~ cargo
+    ),
+    cargo = stringr::str_to_sentence(cargo)
+  ) %>%
+  count(cargo, sort = TRUE)
+
+# Representar la distribución de los cargos
+ggplot(
+  cargos_mujeres,
+  aes(
+    x = reorder(cargo, n),
+    y = n
+  )
+) +
+  geom_col(fill = "steelblue") +
+  geom_text(
+    aes(label = n),
+    hjust = -0.2,
+    size = 3.5
+  ) +
+  coord_flip() +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.15))
+  ) +
+  labs(
+    title = "Cargos ocupados por mujeres en las directivas",
+    x = "Cargo desempeñado",
+    y = "Número de mujeres"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(
+      size = 13,
+      face = "bold",
+      hjust = 0.5
+    ),
+    axis.title = element_text(size = 9),
+    axis.text = element_text(size = 8),
+    plot.caption = element_text(size = 8)
+  )
+```
+
+Los resultados muestran que las mujeres desempeñan diferentes funciones dentro de las directivas. Los cargos de vicepresidenta y secretaria presentan la mayor frecuencia, con cinco mujeres cada uno, seguidos por presidenta, con cuatro, y tesorera, con tres. También se registran participaciones en los cargos de vocal y vocal III, con una mujer en cada caso. Esta distribución evidencia la presencia de mujeres en distintas funciones organizativas, aunque su participación no se limita a los cargos de mayor responsabilidad.
+
+Nota metodológica: el gráfico representa los cargos declarados por las mujeres encuestadas que indicaron pertenecer a una directiva; no representa necesariamente la totalidad de integrantes de las organizaciones.
+
+
+## Pregunta 3. ¿Cómo se percibe la participación de las mujeres en comparación con la participación de los hombres en la gestión del agua?
+Para comparar la percepción sobre la participación de mujeres y hombres en la gestión del agua, se contabilizaron las respuestas correspondientes a los niveles «Bastante», «Poco» y «Nulo». Esta comparación permite identificar diferencias en la percepción de las personas encuestadas respecto a la participación de ambos grupos en los espacios de gestión de la Junta de Riego y Drenaje Machángara.
+
+```{r}
+#| label: fig-participacion-comparada
+#| message: false
+#| warning: false
+#| fig-cap: "Percepción de la participación de mujeres y hombres en la gestión del agua. Fuente: elaboración propia a partir de Chumi (2024)."
+#| fig-width: 7
+#| fig-height: 5
+
+# Contabilizar los niveles de participación de mujeres y hombres
+participacion_comparada <- bind_rows(
+  Datos_Analisis %>%
+    count(nivel_participacion) %>%
+    rename(nivel = nivel_participacion) %>%
+    mutate(grupo = "Mujeres"),
+
+  Datos_Analisis %>%
+    count(Nivel_participación_hombres) %>%
+    rename(nivel = Nivel_participación_hombres) %>%
+    mutate(grupo = "Hombres")
+) %>%
+  filter(!is.na(nivel)) %>%
+  mutate(
+    nivel = factor(
+      nivel,
+      levels = c("Nulo", "Poco", "Bastante")
+    )
+  )
+
+# Construir el gráfico comparativo
+grafico_participacion <- ggplot(
+  participacion_comparada,
+  aes(
+    x = nivel,
+    y = n,
+    color = grupo,
+    text = paste(
+      "Grupo:", grupo,
+      "<br>Nivel de participación:", nivel,
+      "<br>Frecuencia:", n
+    )
+  )
+) +
+  geom_linerange(
+    aes(ymin = 0, ymax = n),
+    position = position_dodge(width = 0.5),
+    linewidth = 2
+  ) +
+  scale_color_viridis_d(option = "plasma") +
+  labs(
+    title = "Percepción de la participación de mujeres y hombres",
+    x = "Nivel de participación",
+    y = "Frecuencia de respuestas",
+    color = "Grupo"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(
+      size = 13,
+      face = "bold",
+      hjust = 0.5
+    ),
+    axis.title = element_text(size = 9),
+    axis.text = element_text(size = 9),
+    legend.title = element_text(size = 9),
+    legend.text = element_text(size = 8)
+  )
+
+# Convertir a gráfico interactivo
+ggplotly(
+  grafico_participacion,
+  tooltip = "text"
+) %>%
+  config(
+    displaylogo = FALSE,
+    locale = "es"
+  )
+```
+
+Los resultados muestran diferencias en la percepción de los niveles de participación de mujeres y hombres. En el caso de las mujeres, la categoría «Bastante» concentra la mayor frecuencia, con 189 respuestas, seguida de «Poco», con 66, y «Nulo», con 7. En contraste, para los hombres predomina la categoría «Poco», con 170 respuestas, seguida de «Bastante», con 90, y «Nulo», con 2.
+
+En términos descriptivos, estos resultados reflejan una percepción más favorable de la participación de las mujeres que de los hombres entre las personas encuestadas. No obstante, se debe considerar que estos datos representan percepciones reportadas y no una medición directa de la participación efectiva de ambos grupos en los espacios de decisión.
+
+# Análisis geoespacial de las tomas de agua y su contexto territorial
+## Revisión de las coordenadas geográficas de las tomas de agua
+Las coordenadas registradas en la base de datos corresponden a las ubicaciones de las tomas de agua de la Junta de Riego y Drenaje Machángara, obtenidas mediante Google Earth y expresadas en WGS 84 / UTM zona 17 Sur (EPSG:32717). Antes de convertirlas en objetos espaciales, se revisarán sus valores y su distribución para verificar que sean adecuados para el análisis geoespacial.
+
+```{r}
+#| label: revision-coordenadas
+#| message: false
+#| warning: false
+
+Datos_Analisis %>%
+  select(
+    toma,
+    `Coordenadas X`,
+    `Coordenadas Y`
+  ) %>%
+  distinct() %>%
+  arrange(toma) %>%
+  head(10)
+```
+
+## Conversión de coordenadas a puntos espaciales
+
+Una vez revisados los valores de las coordenadas, se procedió a transformarlos en una capa de puntos espaciales mediante la función `st_as_sf()` del paquete `sf`. Para ello, se seleccionaron los identificadores de las tomas y sus coordenadas, se eliminaron los registros duplicados y aquellos que no contenían información geográfica. Se asignó el sistema de referencia WGS 84 / UTM zona 17S (EPSG:32717), de acuerdo con el sistema utilizado para representar la información espacial del área de estudio.
+
+```{r}
+#| label: conversion-coordenadas-puntos
+#| message: false
+#| warning: false
+
+Tomas_Agua <- Datos_Analisis %>%
+  select(
+    toma,
+    `Coordenadas X`,
+    `Coordenadas Y`
+  ) %>%
+  distinct() %>%
+  filter(
+    !is.na(`Coordenadas X`),
+    !is.na(`Coordenadas Y`)
+  ) %>%
+  st_as_sf(
+    coords = c("Coordenadas X", "Coordenadas Y"),
+    crs = 32717
+  )
+```
+
+## Verificación de la capa espacial de las tomas de agua
+
+La conversión de las coordenadas permitió generar una capa espacial de puntos que representa la ubicación de las tomas de agua. Posteriormente, se verificaron sus características geométricas, el sistema de referencia de coordenadas y la cantidad de entidades para comprobar que la información estuviera correctamente estructurada.
+
+```{r}
+#| label: verificacion-tomas
+#| message: false
+#| warning: false
+
+# Sistema de referencia
+st_crs(Tomas_Agua)
+
+# Cantidad de entidades
+nrow(Tomas_Agua)
+
+# Tipo de geometría
+st_geometry_type(Tomas_Agua)
+
+# Extensión espacial
+st_bbox(Tomas_Agua)
+
+# Representación preliminar
+plot(
+  st_geometry(Tomas_Agua),
+  main = "Distribución de las tomas de agua"
+)
+```
+
+```{r}
+#| label: fig-verificacion-tomas
+#| fig-cap: "Distribución preliminar de las tomas de agua de la Junta de Riego y Drenaje Machángara."
+#| fig-width: 7
+#| fig-height: 6
+#| out-width: "85%"
+#| fig-align: center
+
+plot(
+  st_geometry(Tomas_Agua),
+  main = "Distribución preliminar de las tomas de agua",
+  pch = 19,
+  col = "steelblue",
+  cex = 0.8,
+  xlab = "Coordenada Este (m)",
+  ylab = "Coordenada Norte (m)"
+)
+
+box()
+```
+
+Los resultados muestran que la capa espacial está conformada por 22 entidades de tipo punto, correspondientes a las ubicaciones de las tomas de agua. El sistema de referencia utilizado es WGS 84 / UTM zona 17 Sur (EPSG:32717), con coordenadas expresadas en metros. La representación preliminar permitió comprobar que la distribución espacial de los puntos coincide con la ubicación observada en el mapa de referencia, por lo que se considera adecuada para continuar con el análisis geoespacial.
+
+## Importación y preparación de las capas territoriales
+Para complementar la información espacial de las tomas de agua, se incorporaron dos capas vectoriales correspondientes a la delimitación de la cuenca Machángara y a la organización territorial parroquial. Estas capas fueron proporcionadas por el Instituto de Estudios de Régimen Seccional del Ecuador (IERSE) y se prepararon en formato GeoPackage para facilitar su manejo y posterior análisis en R.
+
+La capa de la cuenca Machángara permite delimitar el área de estudio, mientras que la capa de organización territorial parroquial contiene los límites administrativos necesarios para identificar las parroquias relacionadas con el territorio de la cuenca. Ambas capas utilizan el sistema de referencia WGS 84 / UTM zona 17 Sur (EPSG:32717), por lo que no fue necesario realizar una transformación de coordenadas.
+
+
+```{r}
+#| label: importacion-capas-territoriales
+#| message: false
+#| warning: false
+#| results: hide
+
+# Autorización de Google Drive
+googledrive::drive_auth(
+  scopes = "https://www.googleapis.com/auth/drive.readonly"
+)
+
+# Identificadores de los archivos
+id_cuenca <- "116W4LFI9_PIrDq98NuEP-l-U3rsXWG1C"
+id_parroquias <- "1-3h1lagdn6jFEQva2q4mpQlnpdkYUDzp"
+
+# Rutas temporales
+archivo_cuenca <- tempfile(fileext = ".gpkg")
+archivo_parroquias <- tempfile(fileext = ".gpkg")
+
+# Descarga de las capas
+googledrive::drive_download(
+  file = googledrive::as_id(id_cuenca),
+  path = archivo_cuenca,
+  overwrite = TRUE
+)
+
+googledrive::drive_download(
+  file = googledrive::as_id(id_parroquias),
+  path = archivo_parroquias,
+  overwrite = TRUE
+)
+
+# Lectura de las capas
+Cuenca_Machangara <- sf::st_read(
+  archivo_cuenca,
+  quiet = TRUE
+)
+
+Parroquias <- sf::st_read(
+  archivo_parroquias,
+  quiet = TRUE
+)
+```
+
+La importación permitió verificar que la cuenca Machángara se encuentra representada mediante una entidad poligonal, mientras que la capa de organización territorial parroquial contiene 1043 entidades de tipo multipolígono. Ambas capas presentan el sistema de referencia WGS 84 / UTM zona 17 Sur (EPSG:32717), lo que permite trabajar con ellas de manera conjunta sin necesidad de transformar sus coordenadas. Estas características proporcionan la base espacial para delimitar las parroquias que intersectan el área de estudio y analizar posteriormente la distribución territorial de las tomas de agua.
+
+## Delimitación de las parroquias dentro de la cuenca Machángara
+Con el propósito de identificar las divisiones administrativas que forman parte del área de estudio, se realizó una intersección espacial entre el límite de la cuenca Machángara y la capa de organización territorial parroquial. Este procedimiento permitió conservar únicamente las porciones de las parroquias que se encuentran dentro de la cuenca, facilitando la identificación de las jurisdicciones administrativas relacionadas con su territorio.
+
+```{r}
+#| label: parroquias-dentro-cuenca
+#| message: false
+#| warning: false
+
+# Unificar el límite de la cuenca Machángara
+Limite_Cuenca <- st_union(Cuenca_Machangara)
+
+# Recortar las parroquias con el límite de la cuenca
+Parroquias_Cuenca <- st_intersection(
+  Parroquias,
+  Limite_Cuenca
+)
+
+# Consultar el número de entidades resultantes
+nrow(Parroquias_Cuenca)
+
+# Consultar las parroquias y sus provincias
+Parroquias_Cuenca %>%
+  st_drop_geometry() %>%
+  distinct(DPA_DESPAR, DPA_DESCAN, DPA_DESPRO)
+```
+
+El recorte espacial identificó 13 parroquias que intersectan la cuenca Machángara. De estas, ocho pertenecen a la provincia del Azuay y cinco a la provincia del Cañar. En el Azuay corresponden al cantón Cuenca, mientras que en Cañar se distribuyen entre los cantones Biblián, Cañar y Déleg. Este resultado evidencia que el territorio de la cuenca comprende varias jurisdicciones administrativas, por lo que su gestión requiere considerar la participación y coordinación de actores de distintos niveles territoriales.
+
+## Relación espacial de las tomas de agua con las parroquias de la cuenca
+Una vez delimitadas las parroquias que intersectan la cuenca Machángara, se realizó una relación espacial entre las 22 tomas de agua y esta capa territorial mediante la función st_join() del paquete sf. Se utilizó el criterio de intersección espacial (st_intersects) para identificar la parroquia en cuyo territorio se encuentra cada toma. Como resultado, se incorporaron a la capa de puntos los atributos correspondientes a la división político-administrativa, incluidos los nombres de las parroquias, cantones y provincias.
+
+```{r}
+#| label: relacion-espacial-tomas-parroquias
+#| message: false
+#| warning: false
+
+Tomas_Parroquias <- st_join(
+  Tomas_Agua,
+  Parroquias_Cuenca,
+  join = st_intersects,
+  left = TRUE
+)
+
+# Revisar la parroquia asociada a cada toma
+Tomas_Parroquias %>%
+  st_drop_geometry() %>%
+  select(
+    toma,
+    DPA_DESPAR,
+    DPA_DESCAN,
+    DPA_DESPRO
+  ) %>%
+  arrange(toma)
+```
+
+La relación espacial permitió asociar las tomas de agua con las parroquias, cantones y provincias que intersectan la cuenca Machángara. Los resultados muestran que las tomas se distribuyen en distintas jurisdicciones administrativas, principalmente en parroquias del cantón Cuenca, provincia del Azuay. Sin embargo, se identificó que la toma 26A no presenta una asignación territorial en esta primera relación espacial, por lo que se requiere revisar particularmente su ubicación respecto al límite de la cuenca.
+
+### Verificación de la ubicación de la toma 26A
+Debido a que la toma 26A no obtuvo una asignación parroquial en la relación espacial, se realizó una comprobación de sus coordenadas y de su ubicación respecto al polígono de la cuenca Machángara y las parroquias delimitadas. Para ello, se verificó si el punto intersecta ambas capas y se calculó posteriormente su distancia respecto al límite de la cuenca.
+
+```{r}
+#| label: verificacion-toma-26A
+#| message: false
+#| warning: false
+
+# Extraer la toma 26A
+Toma_26A <- Tomas_Agua %>%
+  filter(toma == "26A")
+
+# Revisar sus coordenadas
+st_coordinates(Toma_26A)
+
+# Comprobar si intersecta la cuenca
+st_intersects(
+  Toma_26A,
+  Cuenca_Machangara,
+  sparse = FALSE
+)
+
+# Comprobar si intersecta alguna parroquia recortada
+st_intersects(
+  Toma_26A,
+  Parroquias_Cuenca,
+  sparse = FALSE
+)
+```
+
+#### Representación de la ubicación
+
+```{r}
+#| label: ubicacion-toma-26A
+#| message: false
+#| warning: false
+
+plot(
+  st_geometry(Cuenca_Machangara),
+  col = "gray90",
+  border = "black",
+  main = "Ubicación de las tomas de agua respecto a la cuenca"
+)
+
+plot(
+  st_geometry(Parroquias_Cuenca),
+  add = TRUE,
+  border = "gray60",
+  lwd = 0.7
+)
+
+plot(
+  st_geometry(Tomas_Agua),
+  add = TRUE,
+  col = "blue",
+  pch = 16
+)
+
+plot(
+  st_geometry(Toma_26A),
+  add = TRUE,
+  col = "red",
+  pch = 19,
+  cex = 1.5
+)
+
+legend(
+  "topright",
+  legend = c("Otras tomas", "Toma 26A"),
+  col = c("blue", "red"),
+  pch = 19,
+  bty = "n"
+)
+```
+```{r}
+#| label: distancia-toma-26A-limite
+#| message: false
+#| warning: false
+
+# Calcular la distancia mínima entre la toma 26A y el límite de la cuenca
+Distancia_26A <- st_distance(
+  Toma_26A,
+  st_boundary(Cuenca_Machangara)
+)
+
+Distancia_26A
+```
+
+La comprobación espacial permitió identificar que la toma 26A se encuentra fuera del polígono de la cuenca Machángara. El cálculo de distancia determinó que este punto se localiza aproximadamente a 59,55 metros del límite hidrográfico. Esta condición explica por qué no obtuvo una asignación parroquial mediante la capa territorial recortada al área de estudio.
+
+Sin embargo, debido a su proximidad con la cuenca y a su relación con el sistema de aprovechamiento de agua analizado, se considera pertinente identificar su jurisdicción administrativa mediante la capa original de parroquias, sin recortar. Esto permitirá conservar su referencia territorial y diferenciar su ubicación administrativa de su localización respecto al límite hidrográfico.
+
+### Identificación de la jurisdicción administrativa de la toma 26A
+Una vez comprobado que la toma 26A se encuentra fuera del límite de la cuenca Machángara, se realizó una consulta espacial utilizando la capa original de organización territorial parroquial, sin recortar. Este procedimiento permite identificar la parroquia, el cantón y la provincia a los que pertenece el punto, independientemente de que se encuentre fuera del área hidrográfica delimitada.
+
+```{r}
+#| label: identificacion-jurisdiccion-toma-26A
+#| message: false
+#| warning: false
+
+# Relacionar la toma 26A con los límites parroquiales originales
+Toma_26A_Parroquia <- st_join(
+  Toma_26A,
+  Parroquias,
+  join = st_intersects,
+  left = TRUE
+)
+
+# Consultar su jurisdicción administrativa
+Toma_26A_Parroquia %>%
+  st_drop_geometry() %>%
+  select(
+    toma,
+    DPA_DESPAR,
+    DPA_DESCAN,
+    DPA_DESPRO
+  )
+```
+
+La consulta con la capa original de organización territorial permitió identificar que la toma 26A pertenece a la parroquia Cuenca, cantón Cuenca, provincia del Azuay. Aunque su ubicación se encuentra fuera del límite de la cuenca Machángara, a una distancia aproximada de 59,55 metros, corresponde a una jurisdicción administrativa que sí intersecta el área de estudio. Por tanto, se conserva dentro del análisis como una toma vinculada territorialmente con la cuenca, diferenciando su ubicación respecto al límite hidrográfico de su pertenencia político-administrativa.
+
+## Resumen de las tomas de agua según su distribución político-administrativa
+Una vez identificada la jurisdicción administrativa de las 22 tomas de agua, se elaboró una tabla resumen para contabilizar su distribución por parroquia, cantón y provincia. Para este procedimiento se incorporó la asignación de la toma 26A, previamente verificada mediante la capa original de organización territorial, con el propósito de presentar la distribución territorial completa de las tomas registradas.
+
+```{r}
+#| label: resumen-tomas-distribucion-territorial
+#| message: false
+#| warning: false
+
+# Incorporar la asignación comprobada de la toma 26A
+Tomas_Parroquias_Final <- Tomas_Parroquias %>%
+  mutate(
+    DPA_DESPAR = if_else(
+      toma == "26A",
+      "CUENCA",
+      DPA_DESPAR
+    ),
+    DPA_DESCAN = if_else(
+      toma == "26A",
+      "CUENCA",
+      DPA_DESCAN
+    ),
+    DPA_DESPRO = if_else(
+      toma == "26A",
+      "AZUAY",
+      DPA_DESPRO
+    )
+  )
+
+# Resumir las tomas por parroquia
+Resumen_Tomas <- Tomas_Parroquias_Final %>%
+  st_drop_geometry() %>%
+  count(
+    DPA_DESPRO,
+    DPA_DESCAN,
+    DPA_DESPAR,
+    name = "Numero_tomas"
+  ) %>%
+  arrange(DPA_DESPRO, DPA_DESCAN, DPA_DESPAR)
+
+Resumen_Tomas
+```
+
+### Distribución de las tomas de agua por parroquia
+Una vez identificada la distribución político-administrativa de las tomas de agua, se elaboró un gráfico de barras para representar la cantidad de tomas registradas en cada parroquia. Esta representación permite comparar su distribución territorial e identificar las parroquias que concentran un mayor número de puntos de captación. Para su elaboración se utilizaron los resultados de la relación espacial, considerando también la asignación administrativa previamente verificada de la toma 26A.
+
+```{r}
+#| label: fig-distribucion-tomas-parroquia
+#| fig-cap: "Distribución de las tomas de agua por parroquia. Fuente: elaboración propia a partir de Chumi (2024) y la información territorial parroquial."
+#| message: false
+#| warning: false
+
+ggplot(
+  Resumen_Tomas,
+  aes(
+    x = reorder(DPA_DESPAR, Numero_tomas),
+    y = Numero_tomas
+  )
+) +
+  geom_col(fill = "steelblue") +
+  geom_text(
+    aes(label = Numero_tomas),
+    hjust = -0.3,
+    size = 4
+  ) +
+  coord_flip() +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.15))
+  ) +
+  labs(
+    title = "Distribución de las tomas de agua por parroquia",
+    x = "Parroquia",
+    y = "Número de tomas"
+  ) +
+  theme_minimal()
+```
+
+El gráfico muestra una concentración de tomas de agua en la parroquia Chiquintad, que reúne 14 de las 22 tomas identificadas (63,64 %). En menor proporción se encuentran Sinincay, con cinco tomas (22,73 %), y Cuenca, con tres (13,64 %). Esta distribución evidencia una mayor presencia de puntos de captación en Chiquintad respecto a las otras parroquias identificadas. Cabe señalar que el registro de la parroquia Cuenca incluye la toma 26A, localizada fuera del límite hidrográfico de la cuenca.
+
+# Mapas
+## Mapa de ubicación de las tomas de agua
+Para representar la distribución espacial de las tomas de agua, se elaboró un mapa que integra el límite de la cuenca Machángara, las parroquias que intersectan su territorio y los puntos correspondientes a las tomas registradas. Se utilizó una simbología diferenciada para destacar la toma 26A, cuya ubicación se encuentra fuera del límite hidrográfico, aproximadamente a 59,55 metros de este. Esta representación permite observar la relación entre los puntos de captación y el territorio de estudio.
+
+```{r}
+#| label: fig-mapa-ubicacion-tomas
+#| fig-cap: "Ubicación de las tomas de agua respecto a la cuenca Machángara y las divisiones parroquiales. Fuente: elaboración propia a partir de Chumi (2024) y de las capas territoriales facilitadas por IERSE."
+#| message: false
+#| warning: false
+
+ggplot() +
+  # Parroquias que intersectan la cuenca
+  geom_sf(
+    data = Parroquias_Cuenca,
+    fill = "gray95",
+    color = "gray65",
+    linewidth = 0.3
+  ) +
+
+  # Límite de la cuenca
+  geom_sf(
+    data = Cuenca_Machangara,
+    fill = NA,
+    color = "black",
+    linewidth = 0.8
+  ) +
+
+  # Tomas de agua, excepto la 26A
+  geom_sf(
+    data = Tomas_Agua %>% filter(toma != "26A"),
+    aes(color = "Otras tomas"),
+    size = 2
+  ) +
+
+  # Destacar la toma 26A
+  geom_sf(
+    data = Toma_26A,
+    aes(color = "Toma 26A"),
+    size = 3
+  ) +
+
+  scale_color_manual(
+    name = "Ubicación de las tomas",
+    values = c(
+      "Otras tomas" = "blue",
+      "Toma 26A" = "red"
+    )
+  ) +
+
+  labs(
+    title = "Distribución espacial de las tomas de agua",
+    subtitle = "Cuenca Machángara y divisiones territoriales parroquiales",
+      x = "Longitud (°)",
+  y = "Latitud (°)"
+  ) +
+
+  coord_sf() +
+
+  theme_minimal() +
+
+  theme(
+    plot.title = element_text(face = "bold"),
+    legend.position = "bottom",
+    plot.caption = element_text(hjust = 0)
+  )
+```
+
+La representación espacial permite observar la distribución de las 22 tomas de agua registradas en la base de datos respecto al límite de la cuenca del río Machángara y las divisiones territoriales parroquiales. Se identifica que 21 tomas cuentan con una ubicación dentro de las parroquias delimitadas en la cuenca, mientras que la toma 26A se encuentra fuera del límite hidrográfico, a una distancia aproximada de 59,55 metros.
+
+Esta representación permite reconocer la relación espacial entre los puntos de captación y el territorio de estudio, así como identificar situaciones particulares que deben considerarse al analizar la gestión del agua. La ubicación de la toma 26A evidencia la importancia de diferenciar los límites hidrográficos de las jurisdicciones político-administrativas.
+
+## Mapa temático por parroquia
+### Distribución territorial de las tomas de agua por parroquia
+Para representar la distribución territorial de las tomas de agua, se relacionó la capa de parroquias delimitadas dentro de la cuenca Machángara con la tabla resumen de tomas por jurisdicción administrativa. Mediante una unión tabular (left_join()), se incorporó a cada polígono el número de tomas registradas en su territorio. Las parroquias que no presentan tomas asociadas se conservaron en el análisis con un valor de cero.
+
+```{r}
+#| label: preparacion-mapa-tomas-parroquia
+#| message: false
+#| warning: false
+
+Parroquias_Mapa <- Parroquias_Cuenca %>%
+  left_join(
+    Resumen_Tomas,
+    by = c(
+      "DPA_DESPAR",
+      "DPA_DESCAN",
+      "DPA_DESPRO"
+    )
+  ) %>%
+  mutate(
+    Numero_tomas = tidyr::replace_na(Numero_tomas, 0)
+  )
+
+Parroquias_Mapa %>%
+  st_drop_geometry() %>%
+  select(
+    DPA_DESPAR,
+    DPA_DESCAN,
+    DPA_DESPRO,
+    Numero_tomas
+  ) %>%
+  arrange(desc(Numero_tomas))
+```
+
+A partir de la información integrada, se elaboró un mapa coroplético para representar la distribución de las tomas de agua según las parroquias que intersectan la cuenca Machángara. La intensidad del color representa el número de tomas registradas en cada jurisdicción, lo que permite identificar espacialmente las zonas con mayor concentración de puntos de captación.
+
+```{r}
+#| label: fig-mapa-tomas-por-parroquia
+#| fig-cap: "Distribución de las tomas de agua por parroquia en la cuenca Machángara. Fuente: elaboración propia a partir de Chumi (2024) y las capas territoriales de IGM y CONALI."
+#| message: false
+#| warning: false
+
+ggplot() +
+  geom_sf(
+    data = Parroquias_Mapa,
+    aes(fill = Numero_tomas),
+    color = "gray60",
+    linewidth = 0.3
+  ) +
+  geom_sf(
+    data = Cuenca_Machangara,
+    fill = NA,
+    color = "black",
+    linewidth = 0.8
+  ) +
+  scale_fill_gradient(
+    low = "lightyellow",
+    high = "darkred",
+    name = "Número de tomas"
+  ) +
+  labs(
+  title = "Distribución de las tomas de agua por parroquia",
+  subtitle = "Cuenca Machángara",
+  x = "Longitud (°)",
+  y = "Latitud (°)"
+) +
+  coord_sf(expand = FALSE) +
+  theme_minimal()
+```
+
+El mapa muestra una distribución desigual de las tomas de agua entre las parroquias que intersectan la cuenca del río Machángara. La mayor concentración se identifica en Chiquintad, con 14 tomas, equivalente al 63,64 % del total registrado. Le sigue Sinincay, con cinco tomas (22,73 %), mientras que la parroquia Cuenca presenta tres tomas (13,64 %). Las demás parroquias no registran puntos de captación en la base de datos analizada.
+
+Esta distribución permite identificar que las tomas registradas se concentran principalmente en el sector de Chiquintad. No obstante, es importante señalar que el número de tomas corresponde únicamente a la cantidad de puntos identificados y no refleja el volumen de agua aprovechado ni la disponibilidad hídrica existente en cada parroquia. Asimismo, para la parroquia Cuenca se ha considerado la toma 26A, cuya ubicación se encuentra aproximadamente a 59,55 metros fuera del límite hidrográfico; sin embargo, se la incluye debido a que pertenece administrativamente a dicha parroquia.
+
+
+# Conclusiones 
+
+El análisis permitió identificar diferentes factores asociados con la participación de las mujeres en la gestión del recurso hídrico. Entre los más mencionados se encuentran las actividades domésticas, con 178 menciones; la falta de interés, con 92; las actividades realizadas fuera del hogar, con 78; y la recepción tardía de las convocatorias, con 71. Estos resultados muestran que la disponibilidad de tiempo y las condiciones de organización de los espacios participativos son elementos relevantes para comprender las dificultades que pueden limitar la participación de las mujeres. Cabe señalar que estas frecuencias corresponden a menciones de factores y no necesariamente a personas diferentes.
+
+Respecto a la representación en las directivas, se identificó que 19 mujeres de las 162 mujeres registradas en la base de datos ocupaban cargos dentro de las organizaciones analizadas. Su presencia en funciones como presidencia, vicepresidencia, secretaría, tesorería y vocalías evidencia que las mujeres participan en distintos niveles de responsabilidad. Sin embargo, su representación en estos espacios continúa siendo menor en relación con el total de mujeres consideradas en el estudio.
+
+En cuanto a la percepción de la participación, se encontró una diferencia entre las respuestas de mujeres y hombres. La categoría «Bastante» fue la más frecuente entre las mujeres, con 189 respuestas, mientras que entre los hombres predominó la categoría «Poco», con 170 respuestas. Esta diferencia refleja distintas percepciones sobre la participación de ambos grupos en la gestión del agua; no obstante, debe interpretarse como una valoración declarada por las personas encuestadas y no como una medición directa de su participación efectiva.
+
+El componente geoespacial permitió identificar la distribución de 22 tomas de agua registradas en las encuestas dentro del territorio de estudio y relacionarlas con las unidades parroquiales. La mayor concentración se localizó en Chiquintad, con 14 tomas, seguida de Sinincay, con 5, y Cuenca, con 3. Asimismo, la representación cartográfica permitió identificar que la toma 26A se encuentra fuera del límite de la cuenca analizada, aunque corresponde administrativamente a la parroquia Cuenca. Este resultado evidencia la importancia de considerar tanto los límites hidrográficos como los administrativos al interpretar la distribución territorial de las tomas.
+
+En conjunto, los resultados muestran que el análisis de la participación de las mujeres en la gestión del recurso hídrico puede enriquecerse al integrar información social y territorial. Mientras los datos de las encuestas permiten reconocer factores asociados con la participación y la representación en las directivas, el análisis espacial aporta una perspectiva sobre la localización de las tomas de agua y su relación con las parroquias y el límite de la cuenca. Esta integración permite comprender el caso de estudio desde una perspectiva territorial, aunque los resultados deben interpretarse considerando el alcance descriptivo y las características de los datos disponibles.
+
+
+# Limitaciones del análisis
+
+Una limitación relacionada con el desarrollo del análisis fue el proceso de aprendizaje y aplicación de las herramientas utilizadas. El trabajo requirió comprender progresivamente el uso de *tidyverse* para la transformación y organización de los datos, *ggplot2* y *ggplotly* para la elaboración de visualizaciones, y Quarto para la integración y presentación de los resultados. Durante este proceso fue necesario revisar y comprobar el funcionamiento de diferentes funciones, parámetros y estructuras de código, así como corregir errores de ejecución y ajustar las visualizaciones. Por ello, algunas decisiones de procesamiento y presentación estuvieron condicionadas por el nivel de aprendizaje alcanzado durante la elaboración del ejercicio. No obstante, los códigos utilizados fueron ejecutados y verificados, y los resultados obtenidos fueron revisados antes de incorporarlos al análisis.
+
+Por otro lado, el análisis del caso de estudio presenta algunas limitaciones que deben considerarse al interpretar los resultados. En primer lugar, los datos corresponden a las personas participantes en el levantamiento realizado en 2024 y, por tanto, los resultados describen las características de la población estudiada y no necesariamente pueden generalizarse a todas las organizaciones de gestión del agua.
+
+En segundo lugar, parte de las variables analizadas corresponden a percepciones y datos autorreportados por las personas participantes. Por ello, los resultados permiten identificar tendencias en sus opiniones, pero no constituyen una medición directa de la participación efectiva de mujeres y hombres en todos los espacios de gestión del agua.
+
+Asimismo, el enfoque del análisis es principalmente descriptivo. En consecuencia, los factores identificados se presentan como elementos asociados a la participación según las respuestas obtenidas, sin llegar a establecer relaciones causales entre estas variables.
+
+Por último, conviene señalar que el desarrollo de este estudio implicó el aprendizaje y la aplicación de herramientas de programación y visualización en las que aún se profundiza. Para ello, se utilizaron paquetes como tidyverse (transformación y organización de datos), ggplot2 y ggplotly (elaboración de gráficos), sf (tratamiento de información geoespacial) y Quarto (integración y presentación de resultados). Si bien los procedimientos y códigos fueron revisados y explicados a lo largo del documento, continuar fortaleciendo el dominio de estas herramientas permitirá aprovechar mejor sus funcionalidades y abordar análisis más complejos en futuras investigaciones.
+
+# Referencias bibliográficas
+Burneo, Z. (Coord.). (2011). Mujer rural: Cambios y persistencias en América Latina. Centro Peruano de Estudios Sociales (CEPES).
+
+Comité Nacional de Límites Internos. (2019). Organización territorial parroquial [Capa de información geográfica].
+
+Chumi, I. (2024). *Factores que inciden en la representatividad de las mujeres para la toma de decisiones en la gestión del recurso hídrico* [Datos brutos no publicados]. Universidad del Azuay.
+
+Instituto Geográfico Militar. (s. f.). *CH_Microcuencas: Microcuencas* [Conjunto de datos geográficos]. Geoportal del Instituto Geográfico Militar. http://www.geoportaligm.gob.ec:80/p_geoinformacion/wms?service=WFS&version=1.0.0&request=GetFeature&typeName=Clima_Hidrologia:CH_Microcuencas&outputFormat=SHAPE-ZIP 
+
+Njie, N.-I., & Ndiaye, T. (2013, 16 de octubre). Las mujeres y la ordenación de los recursos hídricos agrícolas: Un camino hacia la obtención de la igualdad entre los géneros. Crónica ONU. https://www.un.org/es/chronicle/article/las-mujeres-y-la-ordenacion-de-los-recursos-hidricos-agricolas-un-camino-hacia-la-obtencion-de-la 
+
+Universidad del Azuay, Instituto de Estudios de Régimen Seccional del Ecuador. (2026). *Información territorial: Ecuador* [Visor geográfico]. https://gis.uazuay.edu.ec/visores/info-ecuador/
+
+# Declaración de uso de asistentes de IA
+
+Para la elaboración de este trabajo se utilizó ChatGPT como herramienta de apoyo en el desarrollo del análisis y la elaboración del documento. Su utilización estuvo orientada principalmente a la comprensión y revisión de código en R, la identificación y corrección de errores durante la elaboración del documento en Quarto, así como al apoyo en la organización y redacción de algunas secciones del informe.
+
+Durante el procesamiento de los datos, se utilizó asistencia de IA para resolver problemas de programación (*troubleshooting*), particularmente durante la descarga de la base de datos desde una URL y la interpretación de mensajes de error de R. Asimismo, se consultó para comprender y aplicar funciones de los paquetes utilizados, como `tidyverse`, `ggplot2`, `ggplotly` y `sf`.
+
+En el componente geoespacial, ChatGPT sirvió de apoyo para desarrollar y revisar códigos orientados a verificar la ubicación de las tomas de agua y su relación con los límites parroquiales y de la cuenca. Entre estos procedimientos se incluyó la revisión del caso de la toma 26A, para identificar por qué no tenía una parroquia asignada mediante la unión espacial, así como la aplicación de funciones para calcular su distancia respecto al límite de la cuenca. También se utilizó como orientación para consultar parámetros de presentación de gráficos y figuras en Quarto, como `fig-cap`, `fig-height` y `fig-width`, con el propósito de mejorar su presentación visual.
+
+La selección de las variables, la ejecución y verificación de los códigos, la revisión de los resultados, la interpretación de los datos y las decisiones metodológicas fueron responsabilidad de la autora. Las sugerencias proporcionadas por la herramienta fueron revisadas y comprobadas antes de incorporarse al trabajo.
