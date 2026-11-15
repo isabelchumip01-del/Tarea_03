@@ -8,4 +8,4 @@ Este repositorio contiene el análisis de datos sobre la participación y repres
 
 ## Documento publicado
 
-[Consultar el documento completo](COLOCA_AQUI_EL_ENLACE_DE_GITHUB_PAGES)
+https://isabelchumip01-del.github.io/Tarea_03/
